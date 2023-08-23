@@ -1,4 +1,4 @@
-# MADT4BC: Multi-Aspect Digital Twin for Business Continuity
+# DTOps: A Digital Twin dashboard for DevOps and TechDebt based on neodash
 
 ## Installation
 
@@ -30,6 +30,27 @@ yarn run dev
 ```
 
 Open the dashboard in browser: http://localhost:3000, choose "Existing Dashboard". In the opened dialog, choose neo4j database from localhost, 7687 (should be the default one). Same user name and password as above.
+
+# DTOps pending features
+
+1. Architecture Debt: Microservices (Temporal) Coupling Metrics and Visualization
+
+	1.1 (Temporal) Coupling Metrics
+
+	1.2  Visualization(s)
+
+2. DevOps metrics
+
+	2.1 DORA metrics
+
+	2.2 DevOps process metrics
+
+
+Run MQTT-Kafka bridge:
+
+```
+yarn run mqtt-kafka-bridge
+```
 
 # Original README from NeoDash
 
@@ -116,22 +137,3 @@ If you have any questions about NeoDash, please reach out to the maintainers:
 - Create a post on the Neo4j [Community Forum](https://community.neo4j.com/).
 
 > NeoDash is a free and open-source tool developed by the Neo4j community - not an official Neo4j product. If you have a need for a commercial agreement around training, custom extensions or other services, please contact the [Neo4j Professional Services](https://neo4j.com/professional-services/) team.
-
-
-# DYNABIC pending features
-
-
-1. Attachment chart
-1.1 PDF support
-2. Datasource chart
-2.1 MQTT support
-2.2 Time series data
-
-
-
-Run MQTT-Kafka bridge:
-
-```
-yarn run mqtt-kafka-bridge
-```
-
