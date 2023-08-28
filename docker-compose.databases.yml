@@ -25,14 +25,13 @@ services:
       retries: 5
 
   sindit_neo4j_kg:
-    image: neo4j:4.4-community
+    image: neo4j:5.11-community
     hostname: sindit-neo4j-kg
     container_name: sindit_neo4j_kg
     mem_limit: 4G
     restart: unless-stopped
 
     volumes:
-      - sindit-neo4j-conf-volume:/var/lib/neo4j/conf/
       - sindit-neo4j-logs-volume:/logs
       - sindit-neo4j-data-volume:/data
     healthcheck:
@@ -42,12 +41,11 @@ services:
       retries: 10
     environment:
       - NEO4J_AUTH=neo4j/sindit-neo4j
-      - NEO4JLABS_PLUGINS=["apoc", "graph-algorithms"]
-      - NEO4J_dbms_security_procedures_unrestricted=apoc.*,algo.*,gds.*
-      - NEO4J_dbms_security_procedures_whitelist=apoc.*,algo.*,gds.*
-      - NEO4J_dbms.security.procedures.allowlist=gds.*
-      - NEO4J_apoc_import_file_enabled=true
-      - NEO4J_dbms_shell_enabled=true
+      - NEO4J_PLUGINS=["apoc"]
+      - server.memory.pagecache.size=512MB
+      - server.default_listen_address=0.0.0.0
+      - dbms.securiry_procedures.allowList=apoc.*,algo.*,gds.*
+      - server.directories.logs=/logs      
 
   sindit_minio_s3:
     image: minio/minio
@@ -78,7 +76,6 @@ services:
 
 volumes:
   sindit-minio-s3-volume:
-  sindit-neo4j-conf-volume:
   sindit-neo4j-logs-volume:
   sindit-neo4j-data-volume:
   sindit-influx-db-data-volume:
