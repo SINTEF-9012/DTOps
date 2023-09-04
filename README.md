@@ -39,7 +39,8 @@ Pick an existing project to analyse.
 Run the Python script to generate a dependency graph from the project's docker-compose file:
 
 ```
-python python_dependency_graph_generator\docker_dependency_graph_generator.py <absolute_path_of_the_docker-compose_file>
+cd python_dependency_graph_generator
+python docker_dependency_graph_generator.py <absolute_path_of_the_docker-compose_file>
 ```
 
 Note: the script generates some fake data to simulate project evolution.
@@ -99,7 +100,7 @@ From the dashboard add the following reports:
 
     - Title: Dependencies Sankey Chart
     - Type: Sankey Chart <br>
-      Note: if the Sankey Chart is not available open the dashboard's sidebar, go to Extensions, and activate Advanced Visualizations.
+      Note: if the Sankey Chart is not available, open the dashboard's sidebar, go to Extensions, and activate Advanced Visualizations.
     - Cypher query:
       ```
       MATCH (n:Service)
