@@ -14,6 +14,7 @@ import NeoMarkdownChart from '../chart/markdown/MarkdownChart';
 import { SELECTION_TYPES } from './CardConfig';
 import AttachmentChart from '../chart/attachment/AttachmentChart';
 import DataSourceChart from '../chart/datasource/DataSource';
+import CouplingAnalysis from '../chart/coupling/Coupling';
 
 // TODO: make the reportConfig a interface with not self-documented code
 // Use Neo4j 4.0 subqueries to limit the number of rows returned by overriding the query.
@@ -1261,19 +1262,26 @@ export const REPORT_TYPES = {
     },
   },
   attachment: {
-    label: "Attachment",
-    helperText: "I show the content following the endpoint of an attachment",
+    label: 'Attachment',
+    helperText: 'I show the content following the endpoint of an attachment',
     component: AttachmentChart,
     maxRecords: 1,
-    settings: {}
+    settings: {},
   },
   datasource: {
-    label: "DataSource",
-    helperText: "I show the content following the endpoint of a data source",
+    label: 'DataSource',
+    helperText: 'I show the content following the endpoint of a data source',
     component: DataSourceChart,
     maxRecords: 1,
-    settings: {}
-  }
+    settings: {},
+  },
+  coupling: {
+    label: 'Coupling',
+    helperText: 'Service coupling analysis',
+    component: CouplingAnalysis,
+    maxRecords: 100,
+    settings: {},
+  },
 };
 
 // Default node labels to display when rendering a node in a graph visualization.
