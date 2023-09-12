@@ -16,6 +16,7 @@ import { getPageNumber } from '../settings/SettingsSelectors';
 import { createNotification } from '../application/ApplicationActions';
 import { createNotificationThunk } from '../page/PageThunks';
 import { downloadComponentAsImage } from '../chart/ChartUtils';
+import { DepGraphGenerator } from '../depgraph/DepGrapGenerator';
 
 const Dashboard = ({ pagenumber, connection, applicationSettings, onConnectionUpdate, onDownloadDashboardAsImage }) => {
   const [drawerOpen, setDrawerOpen] = React.useState(false);
@@ -33,6 +34,9 @@ const Dashboard = ({ pagenumber, connection, applicationSettings, onConnectionUp
   const handleDrawerClose = () => {
     setDrawerOpen(false);
   };
+  const handleAnalyseProject = () => {
+    DepGraphGenerator();
+  };
 
   const content = (
     <Neo4jProvider driver={driver}>
@@ -41,7 +45,11 @@ const Dashboard = ({ pagenumber, connection, applicationSettings, onConnectionUp
         connection={connection}
         onConnectionUpdate={onConnectionUpdate}
       />
-      <NeoDrawer open={drawerOpen} handleDrawerClose={handleDrawerClose}></NeoDrawer>
+      <NeoDrawer
+        open={drawerOpen}
+        handleDrawerClose={handleDrawerClose}
+        handleAnalyseProject={handleAnalyseProject}
+      ></NeoDrawer>
       <NeoDashboardHeader
         open={drawerOpen}
         connection={connection}

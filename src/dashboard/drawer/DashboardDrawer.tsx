@@ -20,6 +20,7 @@ import { updateDashboardSetting } from '../../settings/SettingsActions';
 import LibraryBooksIcon from '@material-ui/icons/LibraryBooks';
 import NeoExtensionsModal from '../../extensions/ExtensionsModal';
 import { getExampleReports } from '../../extensions/ExtensionUtils';
+import { Add, BarChartOutlined, QueryBuilderOutlined, StayCurrentLandscapeTwoTone } from '@material-ui/icons';
 
 /**
  * For each config in extensionConfig, if the extensionConfig is opened, render its component
@@ -44,6 +45,7 @@ export const NeoDrawer = ({
   extensions,
   updateDashboardSetting,
   handleDrawerClose,
+  handleAnalyseProject,
   onAboutModalOpen,
   resetApplication,
 }) => {
@@ -112,6 +114,12 @@ export const NeoDrawer = ({
       </div>
       <Divider />
       <List>
+        <ListItem button onClick={handleAnalyseProject}>
+          <ListItemIcon>
+            <Add />
+          </ListItemIcon>
+          <ListItemText primary='ProjectAnalysis' />
+        </ListItem>
         <div>
           <NeoSettingsModal
             dashboardSettings={dashboardSettings}
