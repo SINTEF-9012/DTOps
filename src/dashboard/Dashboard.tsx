@@ -16,7 +16,8 @@ import { getPageNumber } from '../settings/SettingsSelectors';
 import { createNotification } from '../application/ApplicationActions';
 import { createNotificationThunk } from '../page/PageThunks';
 import { downloadComponentAsImage } from '../chart/ChartUtils';
-import { DepGraphGenerator } from '../depgraph/DepGrapGenerator';
+import { GenerateDepGraph } from '../../server/coupling-metrics/DepGrapGenerator';
+import { GenerateMetrics, GenerateMetricsNoArgs } from '../../server/coupling-metrics/generateMetrics';
 
 const Dashboard = ({ pagenumber, connection, applicationSettings, onConnectionUpdate, onDownloadDashboardAsImage }) => {
   const [drawerOpen, setDrawerOpen] = React.useState(false);
@@ -35,7 +36,7 @@ const Dashboard = ({ pagenumber, connection, applicationSettings, onConnectionUp
     setDrawerOpen(false);
   };
   const handleAnalyseProject = () => {
-    DepGraphGenerator();
+    GenerateDepGraph();
   };
 
   const content = (
