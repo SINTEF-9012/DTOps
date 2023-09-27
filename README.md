@@ -95,16 +95,15 @@ From the dashboard add the following reports:
       LIMIT 1
       ```
 
-5.  Dependencies Sankey Chart <br>
+5.  Chord Dependency Diagram <br>
     Configuration:<br>
 
-    - Title: Dependencies Sankey Chart
-    - Type: Sankey Chart <br>
-      Note: if the Sankey Chart is not available, open the dashboard's sidebar, go to Extensions, and activate Advanced Visualizations.
+    - Title: Microservices dependencies
+    - Type: Chord Diagram <br>
     - Cypher query:
       ```
       MATCH (n:Service)
-      OPTIONAL MATCH (n)-[r]-(m)
+      OPTIONAL MATCH (n)-[r:DEPENDS_ON]->(m)
       RETURN n,r,m
       ```
 
