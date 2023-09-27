@@ -15,6 +15,7 @@ import { SELECTION_TYPES } from './CardConfig';
 import AttachmentChart from '../chart/attachment/AttachmentChart';
 import DataSourceChart from '../chart/datasource/DataSource';
 import CouplingAnalysis from '../chart/coupling/Coupling';
+import ChordDiagram from '../chart/chord/ChordDiagram';
 
 // TODO: make the reportConfig a interface with not self-documented code
 // Use Neo4j 4.0 subqueries to limit the number of rows returned by overriding the query.
@@ -1280,6 +1281,11 @@ export const REPORT_TYPES = {
     helperText: 'Service coupling analysis',
     component: CouplingAnalysis,
     maxRecords: 100,
+    settings: {},
+  },
+  chord: {
+    label: 'Chord Diagram',
+    component: ChordDiagram,
     settings: {},
   },
 };

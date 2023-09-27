@@ -7,7 +7,7 @@ import { parse } from 'url';
 import gini from 'gini';
 
 const dependencyGraph = jsonGraph;
-const depFromDocker = false;
+const depFromDocker = true;
 
 const dockerCompFileUrl =
   'https://raw.githubusercontent.com/dotnet-architecture/eShopOnContainers/dev/src/docker-compose.yml';
@@ -58,35 +58,23 @@ async function generateSystemLevelMetrics(session) {
     resultN.records[0].values;
 
     let ADSs: number[] = [];
-    let ADSsSum: number = 0;
-    let giniADSNumerator: number = 0;
     const resultADSs = await session.run('MATCH (s:Service) RETURN s.ADS as ADS ORDER BY ADS').then((result) => {
       result.records.forEach((record, index: number) => {
         let ADS: number = record.get('ADS').toNumber();
         ADSs.push(ADS);
-
-        // Gini ADS coefficient partial calculations
-        let i = index + 1;
-        giniADSNumerator += (2 * i - N - 1) * ADS;
-        ADSsSum += ADS;
       });
     });
 
-    const giniADSCoefficient: number = giniADSNumerator / (N * ADSsSum);
-    const giniADSCoefficient2: number = gini.unordered(ADSs);
+    const giniADSCoefficient: number = gini.unordered(ADSs);
     const SCF = SC / (Math.pow(N, 2) - N);
     const ADSA = SC / N;
 
     // Update System node with SCF and ADSA values
-    await session.run(
-      'MATCH (S:System) SET S.SCF = $scf, S.ADSA = $adsa, S.giniADS = $giniADS, S.giniADS2 = $giniADS2',
-      {
-        scf: SCF,
-        adsa: ADSA,
-        giniADS: giniADSCoefficient,
-        giniADS2: giniADSCoefficient2,
-      }
-    );
+    await session.run('MATCH (S:System) SET S.SCF = $scf, S.ADSA = $adsa, S.giniADS = $giniADS', {
+      scf: SCF,
+      adsa: ADSA,
+      giniADS: giniADSCoefficient,
+    });
   } catch (error) {
     console.error('Error generating system level metrics:', error);
     return null;
@@ -105,6 +93,16 @@ export async function GenerateDepGraph() {
     GenerateDepGraphFromSpinnakerJson();
   }
 }
+
+// // Given two Service nodes' id's, returns true if a relationship exists between the two
+// async function checkRelationshipExists(session, node1, node2): Promise<boolean> {
+//   const relationshipExistsResult = await session.run(
+//     'MATCH (s1:Service {id: $node1}), (s2:Service {id: $node2}) return exists( (s1)-[]-(s2) ) AS relationshipExists',
+//     { node1: node1, node2: node2 }
+//   );
+//   const relationshipExists: boolean = relationshipExistsResult.records[0].get('relationshipExists');
+//   return relationshipExists;
+// }
 
 async function GenerateDepGraphFromDockerCompose() {
   // Neo4j config
@@ -182,7 +180,7 @@ export async function GenerateDepGraphFromSpinnakerJson() {
     const createSystemNodeQuery = `
       CREATE (S:System {N: TOINTEGER($n), SC: TOINTEGER($sc), SCF: $scf, ADSA: $adsa})
     `;
-    await session.run(createSystemNodeQuery, { n: -1, sc: 0, scf: 0, adsa: 0 }); // TODO: change back to 0
+    await session.run(createSystemNodeQuery, { n: 0, sc: 0, scf: 0, adsa: 0 });
 
     // Create nodes for services
     for (const node of dependencyGraph.elements.nodes) {
@@ -217,7 +215,19 @@ export async function GenerateDepGraphFromSpinnakerJson() {
         if (edge.data.traffic.protocol === 'http') communication = 'sync';
         else communication = 'async';
 
-        // Create relationships for dependencies (the value property is needed for the Sankey chart)
+        // // Create relationships for dependencies (the value property is needed for the Sankey chart)
+        // // TODO: define an acyclic set of relationships:
+        // // check if there is already the same relationship or if the opposite relationship is already present
+        // const relationshipExists = await checkRelationshipExists(session, source, target);
+        // if (!relationshipExists) {
+        //   const createAcyclicDependencyRelationshipQuery = `
+        //   MATCH (s1:Service {id: $idSource})
+        //   MATCH (s2:Service {id: $idTarget})
+        //   MERGE (s1)-[:DEPENDENCY {value: 1}]->(s2)
+        // `;
+        //   await session.run(createAcyclicDependencyRelationshipQuery, { idSource: source, idTarget: target });
+        // }
+
         const createDependencyRelationshipQuery = `
         MATCH (s1:Service {id: $idSource})
         MATCH (s2:Service {id: $idTarget})
