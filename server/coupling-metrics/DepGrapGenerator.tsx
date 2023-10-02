@@ -96,16 +96,6 @@ export async function GenerateDepGraph() {
   }
 }
 
-// // Given two Service nodes' id's, returns true if a relationship exists between the two
-// async function checkRelationshipExists(session, node1, node2): Promise<boolean> {
-//   const relationshipExistsResult = await session.run(
-//     'MATCH (s1:Service {id: $node1}), (s2:Service {id: $node2}) return exists( (s1)-[]-(s2) ) AS relationshipExists',
-//     { node1: node1, node2: node2 }
-//   );
-//   const relationshipExists: boolean = relationshipExistsResult.records[0].get('relationshipExists');
-//   return relationshipExists;
-// }
-
 async function GenerateDepGraphFromDockerCompose() {
   // Neo4j config
   const driver = neo4j.driver(uri, neo4j.auth.basic(user, pw));
@@ -220,19 +210,6 @@ export async function GenerateDepGraphFromSpinnakerJson() {
         let communication;
         if (edge.data.traffic.protocol === 'http') communication = 'sync';
         else communication = 'async';
-
-        // // Create relationships for dependencies (the value property is needed for the Sankey chart)
-        // // TODO: define an acyclic set of relationships:
-        // // check if there is already the same relationship or if the opposite relationship is already present
-        // const relationshipExists = await checkRelationshipExists(session, source, target);
-        // if (!relationshipExists) {
-        //   const createAcyclicDependencyRelationshipQuery = `
-        //   MATCH (s1:Service {id: $idSource})
-        //   MATCH (s2:Service {id: $idTarget})
-        //   MERGE (s1)-[:DEPENDENCY {value: 1}]->(s2)
-        // `;
-        //   await session.run(createAcyclicDependencyRelationshipQuery, { idSource: source, idTarget: target });
-        // }
 
         const createDependencyRelationshipQuery = `
         MATCH (s1:Service {id: $idSource})
