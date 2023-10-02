@@ -29,12 +29,17 @@ function drawChordDiagram(
   const index: Map<string, number> = new Map(names.map((name, i) => [name, i]));
   const matrix = Array.from(index, () => new Array(names.length).fill(0));
   const value = 1; // Change this value in case it is given by the graph database
+
+  let sourceIndex, targetIndex;
   for (const { source, target } of data) {
     const sourceIndex = index.get(source);
     const targetIndex = index.get(target);
     if (sourceIndex !== undefined && targetIndex !== undefined) {
       matrix[sourceIndex][targetIndex] += value;
     }
+  }
+  if (sourceIndex !== undefined && targetIndex !== undefined) {
+    matrix[sourceIndex][targetIndex] += value;
   }
 
   const chord = d3
@@ -107,34 +112,62 @@ interface Dependency {
   target: string;
 }
 
-const ChordDiagram = (props: ChartProps) => {
+const ChordDiagramSingleService = (props: ChartProps) => {
   const svgRef = useRef<SVGSVGElement | null>(null);
   if (props.records == null || props.records.length == 0 || props.records[0].keys == null) {
     return <>No data, re-run the report.</>;
   }
   const records = props.records;
+
+  // Variables for the single service version of the diagram
   let services: string[] = [];
+  let dependencySingleService: Dependency[] = [];
+
+  for (const record of records) {
+    // If the service has dependencies, add it to the list of selectable services
+    try {
+      if (record['_fields'][2].properties.name !== null) {
+        const service = record['_fields'][0].properties.name;
+        if (services.indexOf(service) === -1) {
+          services.push(service);
+        }
+      }
+    } catch {}
+  }
+  const [chosenService, setService] = React.useState(services[0]); // The first one will be the one with the highest ADS, if the query orders by ADS.
 
   useEffect(() => {
-    // Retrieve names of the services and sources/targets of the relationships
-    let dependencies: Dependency[] = [];
-
     for (const record of records) {
       // The try is successful when we have a dependency between two services
       try {
-        services.push(record['_fields'][0].properties.name);
-        let dependency: Dependency = {
-          source: record['_fields'][0].properties.name,
-          target: record['_fields'][2].properties.name,
-        };
-        dependencies.push(dependency);
+        if (record['_fields'][0].properties.name == chosenService && record['_fields'][2].properties.name !== null) {
+          dependencySingleService.push({
+            source: record['_fields'][0].properties.name,
+            target: record['_fields'][2].properties.name,
+          });
+        }
       } catch (e) {}
     }
 
-    drawChordDiagram(dependencies, svgRef);
-  }, []);
+    drawChordDiagram(dependencySingleService, svgRef);
+  }, [chosenService]);
 
-  return <svg ref={svgRef}></svg>;
+  const handleChange = (event) => {
+    setService(event.target.value);
+  };
+
+  return (
+    <>
+      <div>
+        <select value={chosenService} onChange={handleChange}>
+          {services.map((option) => (
+            <option value={option}>{option}</option>
+          ))}
+        </select>
+      </div>
+      <svg ref={svgRef} key={chosenService}></svg>
+    </>
+  );
 };
 
-export default ChordDiagram;
+export default ChordDiagramSingleService;

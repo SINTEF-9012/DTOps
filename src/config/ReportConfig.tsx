@@ -16,6 +16,8 @@ import AttachmentChart from '../chart/attachment/AttachmentChart';
 import DataSourceChart from '../chart/datasource/DataSource';
 import CouplingAnalysis from '../chart/coupling/Coupling';
 import ChordDiagram from '../chart/chord/ChordDiagram';
+import ChordDiagramSingleService from '../chart/chord/ChordDiagramSingleService';
+import CouplingMetric from '../chart/couplingMetric/CouplingMetric';
 
 // TODO: make the reportConfig a interface with not self-documented code
 // Use Neo4j 4.0 subqueries to limit the number of rows returned by overriding the query.
@@ -1038,6 +1040,87 @@ export const REPORT_TYPES = {
       },
     },
   },
+  couplingMetric: {
+    label: 'Coupling Metric',
+    helperText: 'This report will show only the first value of the first row returned.',
+    component: CouplingMetric,
+    maxRecords: 1,
+    settings: {
+      backgroundColor: {
+        label: 'Background Color',
+        type: SELECTION_TYPES.COLOR,
+        default: '#fafafa',
+      },
+      fontSize: {
+        label: 'Font Size',
+        type: SELECTION_TYPES.NUMBER,
+        default: 64,
+      },
+      color: {
+        label: 'Color',
+        type: SELECTION_TYPES.TEXT,
+        default: 'rgba(0, 0, 0, 0.87)',
+      },
+      format: {
+        label: 'Display format',
+        type: SELECTION_TYPES.LIST,
+        values: ['auto', 'json', 'yml'],
+        default: 'auto',
+      },
+      monospace: {
+        label: 'Use monospace font',
+        type: SELECTION_TYPES.LIST,
+        values: [true, false],
+        default: false,
+      },
+      textAlign: {
+        label: 'Horizontal Align',
+        type: SELECTION_TYPES.LIST,
+        values: ['left', 'center', 'right'],
+        default: 'left',
+      },
+      verticalAlign: {
+        label: 'Vertical Align',
+        type: SELECTION_TYPES.LIST,
+        values: ['bottom', 'middle', 'top'],
+        default: 'top',
+      },
+      refreshButtonEnabled: {
+        label: 'Refreshable',
+        type: SELECTION_TYPES.LIST,
+        values: [true, false],
+        default: false,
+      },
+      fullscreenEnabled: {
+        label: 'Fullscreen enabled',
+        type: SELECTION_TYPES.LIST,
+        values: [true, false],
+        default: false,
+      },
+      downloadImageEnabled: {
+        label: 'Download Image enabled',
+        type: SELECTION_TYPES.LIST,
+        values: [true, false],
+        default: false,
+      },
+      autorun: {
+        label: 'Auto-run query',
+        type: SELECTION_TYPES.LIST,
+        values: [true, false],
+        default: true,
+      },
+      refreshRate: {
+        label: 'Refresh rate (seconds)',
+        type: SELECTION_TYPES.NUMBER,
+        default: '0 (No refresh)',
+      },
+      description: {
+        label: 'Report Description',
+        type: SELECTION_TYPES.MULTILINE_TEXT,
+        default: 'Enter markdown here...',
+      },
+    },
+  },
   json: {
     label: 'Raw JSON',
     helperText: 'This report will render the raw data returned by Neo4j.',
@@ -1286,6 +1369,11 @@ export const REPORT_TYPES = {
   chord: {
     label: 'Chord Diagram',
     component: ChordDiagram,
+    settings: {},
+  },
+  chordSingleService: {
+    label: 'Chord Diagram Single Service',
+    component: ChordDiagramSingleService,
     settings: {},
   },
 };
