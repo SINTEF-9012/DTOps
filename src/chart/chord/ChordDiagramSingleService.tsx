@@ -141,9 +141,20 @@ const ChordDiagramSingleService = (props: ChartProps) => {
       // The try is successful when we have a dependency between two services
       try {
         if (record['_fields'][0].properties.name == chosenService && record['_fields'][2].properties.name !== null) {
+          const relationship = record['_fields'][0];
+          const firstNodeId = record['_fields'][0].identity;
+          let source: string, target: string;
+          // Check the direction of the relationship
+          if (relationship.startNodeElementId == firstNodeId) {
+            source = record['_fields'][0].properties.name;
+            target = record['_fields'][2].properties.name;
+          } else {
+            source = record['_fields'][2].properties.name;
+            target = record['_fields'][0].properties.name;
+          }
           dependencySingleService.push({
-            source: record['_fields'][0].properties.name,
-            target: record['_fields'][2].properties.name,
+            source: source,
+            target: target,
           });
         }
       } catch (e) {}
