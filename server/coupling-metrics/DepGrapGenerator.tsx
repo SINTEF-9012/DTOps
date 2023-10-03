@@ -17,7 +17,7 @@ const uri = 'bolt://localhost:7687';
 const user = 'neo4j';
 const pw = 'sindit-neo4j';
 
-const databaseKeywords = ['mongo', 'sql', 'mysql', 'postgres', 'neo4j'];
+const resourcesKeywords = ['mongo', 'sql', 'mysql', 'postgres', 'neo4j', 'redis'];
 
 async function loadDockerComposeData() {
   try {
@@ -121,7 +121,7 @@ async function GenerateDepGraphFromDockerCompose() {
 
         // Check if the service is a database
         let isDatabase = false;
-        databaseKeywords.map((dbKey) => {
+        resourcesKeywords.map((dbKey) => {
           if (parsedDockerCompose && parsedDockerCompose.services[serviceName].image.includes(dbKey)) {
             isDatabase = true;
           }
