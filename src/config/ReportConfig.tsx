@@ -18,6 +18,7 @@ import CouplingAnalysis from '../chart/coupling/Coupling';
 import ChordDiagram from '../chart/chord/ChordDiagram';
 import ChordDiagramSingleService from '../chart/chord/ChordDiagramSingleService';
 import CouplingMetric from '../chart/couplingMetric/CouplingMetric';
+import ChordDiagramSharedResources from '../chart/chord/ChordDiagramSharedResources';
 
 // TODO: make the reportConfig a interface with not self-documented code
 // Use Neo4j 4.0 subqueries to limit the number of rows returned by overriding the query.
@@ -1374,6 +1375,11 @@ export const REPORT_TYPES = {
   chordSingleService: {
     label: 'Chord Diagram Single Service',
     component: ChordDiagramSingleService,
+    settings: {},
+  },
+  chordSharedResources: {
+    label: 'Chord Diagram Shared Resources',
+    component: ChordDiagramSharedResources,
     settings: {},
   },
 };

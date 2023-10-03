@@ -17,6 +17,8 @@ const uri = 'bolt://localhost:7687';
 const user = 'neo4j';
 const pw = 'sindit-neo4j';
 
+const databaseKeywords = ['mongo', 'sql', 'mysql', 'postgres', 'neo4j'];
+
 async function loadDockerComposeData() {
   try {
     const response = await fetch(dockerCompFileUrl);
@@ -117,13 +119,21 @@ async function GenerateDepGraphFromDockerCompose() {
       for (const serviceName in parsedDockerCompose.services) {
         const service = parsedDockerCompose.services[serviceName];
 
+        // Check if the service is a database
+        let isDatabase = false;
+        databaseKeywords.map((dbKey) => {
+          if (parsedDockerCompose && parsedDockerCompose.services[serviceName].image.includes(dbKey)) {
+            isDatabase = true;
+          }
+        });
+
         // Create nodes for services
         const createServiceNodeQuery = `
         MATCH (S:System)
-        CREATE (service:Service {name: $name, ADS: TOINTEGER($ads), nodeSize: TOINTEGER($nodeSize)})
+        CREATE (service:Service {name: $name, ADS: TOINTEGER($ads), nodeSize: TOINTEGER($nodeSize), isDatabase: $isDatabase})
         SET S.N = S.N+1
       `;
-        await session.run(createServiceNodeQuery, { name: serviceName, ads: 0, nodeSize: 1 });
+        await session.run(createServiceNodeQuery, { name: serviceName, ads: 0, nodeSize: 1, isDatabase: isDatabase });
       }
 
       for (const serviceName in parsedDockerCompose.services) {
