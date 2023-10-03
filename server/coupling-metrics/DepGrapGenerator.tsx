@@ -130,10 +130,16 @@ async function GenerateDepGraphFromDockerCompose() {
         // Create nodes for services
         const createServiceNodeQuery = `
         MATCH (S:System)
-        CREATE (service:Service {name: $name, ADS: TOINTEGER($ads), nodeSize: TOINTEGER($nodeSize), isDatabase: $isDatabase})
+        CREATE (service:Service {name: $name, ADS: TOINTEGER($ads), AIS: TOINTEGER($ais), nodeSize: TOINTEGER($nodeSize), isDatabase: $isDatabase})
         SET S.N = S.N+1
       `;
-        await session.run(createServiceNodeQuery, { name: serviceName, ads: 0, nodeSize: 1, isDatabase: isDatabase });
+        await session.run(createServiceNodeQuery, {
+          name: serviceName,
+          ads: 0,
+          ais: 0,
+          nodeSize: 1,
+          isDatabase: isDatabase,
+        });
       }
 
       for (const serviceName in parsedDockerCompose.services) {
@@ -147,6 +153,7 @@ async function GenerateDepGraphFromDockerCompose() {
             MATCH (s2:Service {name: $name2})
             MATCH (S:System)
             SET s1.ADS = s1.ADS+1, s1.nodeSize=s1.nodeSize+1
+            SET s2.AIS = s2.AIS+1
             SET S.SC = S.SC+1
             CREATE (s1)-[:DEPENDS_ON {value: 1}]->(s2) 
           `;
