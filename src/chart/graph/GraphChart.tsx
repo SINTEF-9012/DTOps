@@ -19,6 +19,7 @@ import { downloadCSV } from '../ChartUtils';
 import { GraphChartContextMenu } from './component/GraphChartContextMenu';
 import { getSettings } from '../SettingsUtils';
 import { generateSafeColumnKey } from '../table/TableChart';
+import { renderValueByType } from '../../report/ReportRecordProcessing';
 
 /**
  * Draws graph data using a force-directed-graph visualization.
@@ -34,6 +35,7 @@ const NeoGraphChart = (props: ChartProps) => {
   const settings = getSettings(props.settings, props.extensions, props.getGlobalParameter);
   const linkDirectionalParticles = props.settings && props.settings.relationshipParticles ? 5 : undefined;
   const arrowLengthProp = props?.settings?.arrowLengthProp ?? 3;
+  const architecturalSmellProp = props?.settings?.architecturalSmell;
 
   let nodePositions = props.settings && props.settings.nodePositions ? props.settings.nodePositions : {};
   const parameters = props.parameters ? props.parameters : {};
@@ -207,14 +209,84 @@ const NeoGraphChart = (props: ChartProps) => {
     },
   };
 
+  let architecturalSmells: string[] = [];
+  if (architecturalSmellProp) {
+    props.records.map((record, rownumber) => {
+      // record._fields.map((field, i) => {
+      //   console.log('record: ' + field);
+      //   console.log('i: ' + i);
+      // });
+      architecturalSmells.push(record?._fields[0]?.properties?.name);
+    });
+  }
+
+  const [choosenArchitecturalSmellName, setService] = React.useState(architecturalSmells[0]); // The first one will be the one with the highest ADS, if the query orders by ADS.
+  const handleChange = (event) => {
+    setService(event.target.value);
+  };
+
+  let choosenArchitecturalSmell;
+  let architecturalSmellsNumber;
+  if (architecturalSmellProp) {
+    choosenArchitecturalSmell = props.records.find(
+      (element) => element._fields[0]?.properties.name === choosenArchitecturalSmellName
+    );
+    architecturalSmellsNumber = architecturalSmells.length;
+  }
+
   // When data is refreshed, rebuild the visualization data.
   useEffect(() => {
-    generateVisualizationDataGraph(props.records, chartProps);
-  }, [props.records]);
+    if (architecturalSmellProp) {
+      generateVisualizationDataGraph([choosenArchitecturalSmell], Object.getOwnPropertyNames(chartProps));
+    } else {
+      generateVisualizationDataGraph(props.records, Object.getOwnPropertyNames(chartProps));
+    }
+  }, [props.records, choosenArchitecturalSmell]);
+
+  const createDisplayValue = (value) => {
+    return renderValueByType(value);
+  };
 
   return (
     <div ref={observe} style={{ width: '100%', height: '100%' }}>
-      <NeoGraphChartCanvas>
+      {architecturalSmellProp && (
+        <>
+          <div
+            style={{
+              height: '100px',
+              lineHeight: '100px',
+              position: 'relative',
+              textAlign: 'center',
+              marginLeft: '15px',
+              marginRight: '15px',
+            }}
+          >
+            <span
+              style={{
+                display: 'inline-block',
+                verticalAlign: 'verticalAlign',
+                whiteSpace: 'pre',
+                marginTop: '-72px',
+                fontSize: '48px',
+                lineHeight: '56px',
+              }}
+            >
+              {createDisplayValue(architecturalSmellsNumber)}{' '}
+              {architecturalSmellsNumber > 1 ? 'smells found' : 'smell found'}
+            </span>
+          </div>
+          <div>
+            {architecturalSmellsNumber > 1 && (
+              <select value={choosenArchitecturalSmellName} onChange={handleChange}>
+                {architecturalSmells.map((option) => (
+                  <option value={option}>{option}</option>
+                ))}
+              </select>
+            )}
+          </div>
+        </>
+      )}
+      <NeoGraphChartCanvas key={choosenArchitecturalSmellName}>
         <GraphChartContextMenu {...chartProps} />
         <NeoGraphChartFitViewButton {...chartProps} />
         {settings.lockable ? <NeoGraphChartLockButton {...chartProps} /> : <></>}

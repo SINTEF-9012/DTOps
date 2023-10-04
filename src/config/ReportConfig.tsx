@@ -119,6 +119,12 @@ export const REPORT_TYPES = {
     // between the different options (EX: if operator is false, then it must be the opposite of the setting it depends on)
     disabledDependency: { relationshipParticleSpeed: { dependsOn: 'relationshipParticles', operator: false } },
     settings: {
+      architecturalSmell: {
+        label: 'Architectural Smell',
+        type: SELECTION_TYPES.LIST,
+        default: false,
+        values: [true, false],
+      },
       backgroundColor: {
         label: 'Background Color',
         type: SELECTION_TYPES.COLOR,

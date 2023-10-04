@@ -17,7 +17,7 @@ const uri = 'bolt://localhost:7687';
 const user = 'neo4j';
 const pw = 'sindit-neo4j';
 
-const resourcesKeywords = ['mongo', 'sql', 'mysql', 'postgres', 'neo4j', 'redis'];
+const resourcesKeywords = ['mongo', 'sql', 'mysql', 'postgres', 'neo4j', 'redis', 'memcached'];
 
 async function loadDockerComposeData() {
   try {
@@ -52,6 +52,20 @@ async function parseDockerComposeFile(): Promise<DockerComposeConfig | null> {
   return composeConfig;
 }
 
+function median(values: number[]): number {
+  if (values.length === 0) {
+    throw new Error('Input array is empty');
+  }
+
+  // Sorting values, preventing original array
+  // from being mutated.
+  values = [...values].sort((a, b) => a - b);
+
+  const half = Math.floor(values.length / 2);
+
+  return values.length % 2 ? values[half] : (values[half - 1] + values[half]) / 2;
+}
+
 async function generateSystemLevelMetrics(session) {
   try {
     const resultSC = await session.run('MATCH (S:System) RETURN S.SC');
@@ -62,23 +76,33 @@ async function generateSystemLevelMetrics(session) {
     resultN.records[0].values;
 
     let ADSs: number[] = [];
-    const resultADSs = await session.run('MATCH (s:Service) RETURN s.ADS as ADS ORDER BY ADS').then((result) => {
-      result.records.forEach((record, index: number) => {
-        let ADS: number = record.get('ADS').toNumber();
-        ADSs.push(ADS);
+    let AISs: number[] = [];
+    const resultADSs = await session
+      .run('MATCH (s:Service) RETURN s.ADS as ADS, s.AIS as AIS ORDER BY ADS')
+      .then((result) => {
+        result.records.forEach((record, index: number) => {
+          ADSs.push(record.get('ADS').toNumber());
+          AISs.push(record.get('AIS').toNumber());
+        });
       });
-    });
 
     const giniADSCoefficient: number = gini.unordered(ADSs);
     const SCF = SC / (Math.pow(N, 2) - N);
     const ADSA = SC / N;
+    const adsMedian = median(ADSs);
+    const aisMedian = median(AISs);
 
     // Update System node with SCF and ADSA values
-    await session.run('MATCH (S:System) SET S.SCF = $scf, S.ADSA = $adsa, S.giniADS = $giniADS', {
-      scf: SCF,
-      adsa: ADSA,
-      giniADS: giniADSCoefficient,
-    });
+    await session.run(
+      'MATCH (S:System) SET S.SCF = $scf, S.ADSA = $adsa, S.giniADS = $giniADS, S.adsMedian = TOINTEGER($adsMedian), S.aisMedian = TOINTEGER($aisMedian)',
+      {
+        scf: SCF,
+        adsa: ADSA,
+        giniADS: giniADSCoefficient,
+        adsMedian: adsMedian,
+        aisMedian: aisMedian,
+      }
+    );
   } catch (error) {
     console.error('Error generating system level metrics:', error);
     return null;
@@ -112,49 +136,48 @@ async function GenerateDepGraphFromDockerCompose() {
     try {
       // Create a System node to maitain all the system level metrics
       const createSystemNodeQuery = `
-      CREATE (S:System {N: TOINTEGER($n), SC: TOINTEGER($sc), SCF: $scf, ADSA: $adsa})
+      CREATE (S:System {N: TOINTEGER($n), SC: TOINTEGER($sc), SCF: $scf, ADSA: $adsa, adsMedian: TOINTEGER($adsMedian), aisMedian: TOINTEGER($aisMedian)})
     `;
-      await session.run(createSystemNodeQuery, { n: 0, sc: 0, scf: 0, adsa: 0 });
+      await session.run(createSystemNodeQuery, { n: 0, sc: 0, scf: 0, adsa: 0, adsMedian: 0, aisMedian: 0 });
 
       for (const serviceName in parsedDockerCompose.services) {
         const service = parsedDockerCompose.services[serviceName];
 
-        // Check if the service is a database
-        let isDatabase = false;
+        // Check if the service is a resource
+        let isResource = false;
         resourcesKeywords.map((dbKey) => {
           if (parsedDockerCompose && parsedDockerCompose.services[serviceName].image.includes(dbKey)) {
-            isDatabase = true;
+            isResource = true;
           }
         });
 
         // Create nodes for services
         const createServiceNodeQuery = `
         MATCH (S:System)
-        CREATE (service:Service {name: $name, ADS: TOINTEGER($ads), AIS: TOINTEGER($ais), nodeSize: TOINTEGER($nodeSize), isDatabase: $isDatabase})
+        CREATE (service:Service {name: $name, ADS: TOINTEGER($ads), AIS: TOINTEGER($ais), degree: TOINTEGER($degree), nodeSize: TOINTEGER($nodeSize), isResource: $isResource})
         SET S.N = S.N+1
       `;
         await session.run(createServiceNodeQuery, {
           name: serviceName,
           ads: 0,
           ais: 0,
+          degree: 0,
           nodeSize: 1,
-          isDatabase: isDatabase,
+          isResource: isResource,
         });
       }
 
       for (const serviceName in parsedDockerCompose.services) {
         const service = parsedDockerCompose.services[serviceName];
 
-        // Create relationships for dependencies (the value property is needed for the Sankey chart)
+        // Create relationships for dependencies
         if (service.depends_on) {
           for (const dependency of service.depends_on) {
             const createDependencyRelationshipQuery = `
             MATCH (s1:Service {name: $name1})
             MATCH (s2:Service {name: $name2})
             MATCH (S:System)
-            SET s1.ADS = s1.ADS+1, s1.nodeSize=s1.nodeSize+1
-            SET s2.AIS = s2.AIS+1
-            SET S.SC = S.SC+1
+            SET s1.ADS = s1.ADS+1, s1.degree = s1.degree+1, s2.degree = s2.degree+1, s1.nodeSize=s1.nodeSize+1, s2.AIS = s2.AIS+1, S.SC = S.SC+1
             CREATE (s1)-[:DEPENDS_ON {value: 1}]->(s2) 
           `;
             await session.run(createDependencyRelationshipQuery, {
