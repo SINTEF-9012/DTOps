@@ -20,6 +20,19 @@ import { GraphChartContextMenu } from './component/GraphChartContextMenu';
 import { getSettings } from '../SettingsUtils';
 import { generateSafeColumnKey } from '../table/TableChart';
 import { renderValueByType } from '../../report/ReportRecordProcessing';
+import { VerticalAlignCenter } from '@material-ui/icons';
+
+enum Priority {
+  high = 'high',
+  medium = 'medium',
+  low = 'low',
+}
+
+interface ArchitecturalSmell {
+  name: string;
+  size: number;
+  priority: Priority;
+}
 
 /**
  * Draws graph data using a force-directed-graph visualization.
@@ -209,29 +222,49 @@ const NeoGraphChart = (props: ChartProps) => {
     },
   };
 
-  let architecturalSmells: string[] = [];
+  // Create list of Architectural Smells
+  let architecturalSmells: ArchitecturalSmell[] = [];
+  let architecturalSmellsSizes: number[] = [];
+  let architecturalSmellsNumber;
   if (architecturalSmellProp) {
     props.records.map((record, rownumber) => {
-      // record._fields.map((field, i) => {
-      //   console.log('record: ' + field);
-      //   console.log('i: ' + i);
-      // });
-      architecturalSmells.push(record?._fields[0]?.properties?.name);
+      const smellSize: number = record?._fields[3];
+      architecturalSmellsSizes.push(smellSize);
+      const smell: ArchitecturalSmell = {
+        name: record?._fields[0]?.properties?.name,
+        size: smellSize,
+        priority: Priority.low,
+      };
+      architecturalSmells.push(smell);
+    });
+    // Prioritize smells
+    console.log('Smell sizes: ' + architecturalSmellsSizes);
+    architecturalSmellsNumber = architecturalSmells.length;
+    const highPriorityIndex = Math.floor(architecturalSmellsNumber / 3) * 2;
+    const mediumPriorityIndex = Math.floor(architecturalSmellsNumber / 3);
+    architecturalSmells.map((smell) => {
+      if (smell.size >= architecturalSmellsSizes[highPriorityIndex]) {
+        smell.priority = Priority.high;
+      } else if (smell.size >= architecturalSmellsSizes[mediumPriorityIndex]) {
+        smell.priority = Priority.medium;
+      } else {
+        smell.priority = Priority.low;
+      }
     });
   }
 
-  const [choosenArchitecturalSmellName, setService] = React.useState(architecturalSmells[0]); // The first one will be the one with the highest ADS, if the query orders by ADS.
+  // Handle selection of the smell from the dropdown menu
+  const [choosenArchitecturalSmellName, setService] = React.useState(architecturalSmells[0].name); // The first one will be the one with the highest ADS, if the query orders by ADS.
   const handleChange = (event) => {
     setService(event.target.value);
   };
 
+  // Select record corresponding to the node with the smell
   let choosenArchitecturalSmell;
-  let architecturalSmellsNumber;
   if (architecturalSmellProp) {
     choosenArchitecturalSmell = props.records.find(
       (element) => element._fields[0]?.properties.name === choosenArchitecturalSmellName
     );
-    architecturalSmellsNumber = architecturalSmells.length;
   }
 
   // When data is refreshed, rebuild the visualization data.
@@ -275,14 +308,47 @@ const NeoGraphChart = (props: ChartProps) => {
               {architecturalSmellsNumber > 1 ? 'smells found' : 'smell found'}
             </span>
           </div>
-          <div>
+
+          <div
+            style={{
+              height: '100px',
+              lineHeight: '100px',
+              position: 'relative',
+              textAlign: 'left',
+              marginLeft: '15px',
+              marginRight: '15px',
+            }}
+          >
+            {/* <div> */}
             {architecturalSmellsNumber > 1 && (
-              <select value={choosenArchitecturalSmellName} onChange={handleChange}>
+              <select value={choosenArchitecturalSmellName} onChange={handleChange} style={{ verticalAlign: 'center' }}>
                 {architecturalSmells.map((option) => (
-                  <option value={option}>{option}</option>
+                  <option value={option.name}>{option.name}</option>
                 ))}
               </select>
             )}
+            {/* </div> */}
+            <div style={{ float: 'right' }}>
+              <span
+                style={{
+                  height: '100%',
+                  width: 'inherit',
+                  display: 'inline-block',
+                  verticalAlign: 'center',
+                  whiteSpace: 'pre',
+                  marginTop: '-72px',
+                  fontSize: '22px',
+                  textAlign: 'right',
+                  lineHeight: '30px',
+                  color: 'black',
+                }}
+              >
+                {'Size ' + architecturalSmells.find((smell) => smell.name === choosenArchitecturalSmellName)?.size}
+                <br></br>
+                {'Priority ' +
+                  architecturalSmells.find((smell) => smell.name === choosenArchitecturalSmellName)?.priority}
+              </span>
+            </div>
           </div>
         </>
       )}
