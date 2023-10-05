@@ -86,7 +86,7 @@ async function generateSystemLevelMetrics(session) {
         });
       });
 
-    const giniADSCoefficient: number = gini.unordered(ADSs);
+    const giniADSCoefficient: string = '' + Math.floor(gini.unordered(ADSs) * 100) + '%';
     const SCF = SC / (Math.pow(N, 2) - N);
     const ADSA = SC / N;
     const adsMedian = median(ADSs);
