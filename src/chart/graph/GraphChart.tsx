@@ -228,7 +228,7 @@ const NeoGraphChart = (props: ChartProps) => {
   let architecturalSmellsNumber;
   if (architecturalSmellProp) {
     props.records.map((record, rownumber) => {
-      const smellSize: number = record?._fields[3];
+      const smellSize: number = record?._fields[3] + record?._fields[0];
       architecturalSmellsSizes.push(smellSize);
       const smell: ArchitecturalSmell = {
         name: record?._fields[0]?.properties?.name,

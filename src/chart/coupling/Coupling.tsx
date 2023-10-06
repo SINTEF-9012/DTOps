@@ -91,7 +91,7 @@ const CouplingAnalysis = (props: ChartProps) => {
                 <strong>{ADSACriticalityLabels[ADSACriticality]}</strong>
               </p>
               <p>
-                {'Gini ADS coeficient criticality: '}
+                {'Coupling dispersion: '}
                 <strong>{giniADSCriticalityLabels[giniADSCriticality]}</strong>
               </p>
               {systemIsLarge && (
