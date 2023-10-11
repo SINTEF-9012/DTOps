@@ -5,7 +5,7 @@ import { renderValueByType } from '../../report/ReportRecordProcessing';
 const smallSystemSize: number = 4;
 const ADSACriticalityThresholds: number[] = [0.5, 1.0];
 const ADSACriticalityLabels: string[] = ['low', 'high', 'very high'];
-const giniADSCriticalityThresholds: number[] = [0.3];
+const giniADSCriticalityThresholds: number[] = [30];
 const giniADSCriticalityLabels: string[] = ['balanced', 'not balanced'];
 const SCFCriticalityThresholds: number[] = [0.05, 0.1];
 const SCFCriticalityLabels: string[] = ['low', 'high', 'very high'];
@@ -68,9 +68,9 @@ const CouplingAnalysis = (props: ChartProps) => {
       <div>
         {r['_fields'].map((value) => {
           let numberOfServices = parseInt(renderValueByType(value.properties.N));
-          let ADSA = renderValueByType(value.properties.ADSA);
-          let giniADS = renderValueByType(value.properties.giniADS);
-          let SCF = renderValueByType(value.properties.SCF);
+          let ADSA = parseFloat(renderValueByType(value.properties.ADSA).replace(',', '.'));
+          let giniADS = parseInt(renderValueByType(value.properties.giniADS).replace('%', ''));
+          let SCF = parseFloat(renderValueByType(value.properties.SCF).replace(',', '.'));
 
           const systemIsLarge: boolean = isSystemLarge(numberOfServices);
           const ADSACriticality: number = getMetricCriticality(ADSA, ADSACriticalityThresholds);
