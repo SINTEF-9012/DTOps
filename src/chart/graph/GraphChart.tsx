@@ -228,8 +228,17 @@ const NeoGraphChart = (props: ChartProps) => {
   let architecturalSmellsNumber;
   if (architecturalSmellProp) {
     props.records.map((record, rownumber) => {
-      const smellSize: number = record?._fields[3] + record?._fields[0];
-      architecturalSmellsSizes.push(smellSize);
+      const smellSize: number = parseInt(record?._fields[3]);
+      console.log('type of smellsize: ' + typeof smellSize);
+      console.log(
+        'type of architecturalSmellsSizes: ' + typeof architecturalSmellsSizes[architecturalSmellsSizes.length - 1]
+      );
+
+      // Insert only unique values
+      if (!architecturalSmellsSizes.includes(smellSize)) {
+        console.log('Inserting');
+        architecturalSmellsSizes.push(smellSize);
+      }
       const smell: ArchitecturalSmell = {
         name: record?._fields[0]?.properties?.name,
         size: smellSize,
@@ -238,23 +247,31 @@ const NeoGraphChart = (props: ChartProps) => {
       architecturalSmells.push(smell);
     });
     // Prioritize smells
-    console.log('Smell sizes: ' + architecturalSmellsSizes);
     architecturalSmellsNumber = architecturalSmells.length;
-    const highPriorityIndex = Math.floor(architecturalSmellsNumber / 3) * 2;
-    const mediumPriorityIndex = Math.floor(architecturalSmellsNumber / 3);
+    const prioritiesNumber = architecturalSmellsSizes.length;
+    const highPriorityIndex = Math.floor(prioritiesNumber / 3);
+    const mediumPriorityIndex = Math.floor(prioritiesNumber / 3) * 2;
+    console.log('architectural smells: ' + architecturalSmellsSizes);
     architecturalSmells.map((smell) => {
+      console.log('architecturalSmellsNumber: ' + architecturalSmellsNumber);
+      console.log('Size: ' + smell.size);
+      console.log('high priority size: ' + architecturalSmellsSizes[highPriorityIndex]);
+      console.log('medium priority size: ' + architecturalSmellsSizes[mediumPriorityIndex]);
       if (smell.size >= architecturalSmellsSizes[highPriorityIndex]) {
+        console.log('High');
         smell.priority = Priority.high;
       } else if (smell.size >= architecturalSmellsSizes[mediumPriorityIndex]) {
+        console.log('Medium');
         smell.priority = Priority.medium;
       } else {
         smell.priority = Priority.low;
+        console.log('Low');
       }
     });
   }
 
   // Handle selection of the smell from the dropdown menu
-  const [choosenArchitecturalSmellName, setService] = React.useState(architecturalSmells[0].name); // The first one will be the one with the highest ADS, if the query orders by ADS.
+  const [choosenArchitecturalSmellName, setService] = React.useState(architecturalSmells[0]?.name); // The first one will be the one with the highest ADS, if the query orders by ADS.
   const handleChange = (event) => {
     setService(event.target.value);
   };
