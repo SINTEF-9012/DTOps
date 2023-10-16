@@ -1,0 +1,309 @@
+{
+  "title": "Architectural Technical Debt",
+  "version": "2.2",
+  "settings": {
+    "pagenumber": 2,
+    "editable": true,
+    "fullscreenEnabled": false,
+    "parameters": {
+      "main_selected_node": 147,
+      "neodash_version": "version2",
+      "neodash_version_display": "version2"
+    }
+  },
+  "pages": [
+    {
+      "title": "System level coupling",
+      "reports": [
+        {
+          "title": "Number of Services",
+          "query": "MATCH (Sm:System)\nRETURN Sm.N\nLIMIT 1\n\n\n",
+          "width": 2,
+          "height": 1,
+          "x": 0,
+          "y": 1,
+          "type": "value",
+          "selection": {},
+          "settings": {}
+        },
+        {
+          "title": "Sum of Calls",
+          "query": "MATCH (Sm:System)\nRETURN Sm.SC\nLIMIT 1\n\n",
+          "width": 2,
+          "height": 1,
+          "x": 2,
+          "y": 1,
+          "type": "value",
+          "selection": {},
+          "settings": {}
+        },
+        {
+          "title": "Coupling dispersion",
+          "query": "MATCH (Sm:System)\nRETURN Sm.giniADS\nLIMIT 1",
+          "width": 2,
+          "height": 1,
+          "x": 0,
+          "y": 2,
+          "type": "value",
+          "selection": {},
+          "settings": {}
+        },
+        {
+          "title": "Avg out-degree",
+          "query": "MATCH (Sm:System)\nRETURN Sm.ADSA\nLIMIT 1\n\n\n",
+          "width": 2,
+          "height": 1,
+          "x": 2,
+          "y": 2,
+          "type": "value",
+          "selection": {},
+          "settings": {}
+        },
+        {
+          "title": "Evolution of SC",
+          "query": "MATCH (n:System) \nWITH collect(n) as nodes\nWITH apoc.coll.zip(nodes, range(0, size(nodes))) as pairs\nUNWIND pairs as pair \nRETURN pair[0].SC as SC, pair[1] as ID\n",
+          "width": 4,
+          "height": 2,
+          "x": 0,
+          "y": 3,
+          "type": "line",
+          "selection": {
+            "x": "ID",
+            "value": [
+              "SC"
+            ]
+          },
+          "settings": {
+            "xScale": "linear"
+          }
+        },
+        {
+          "title": "Evolution of ADSA",
+          "query": "MATCH (n:System) \nWITH collect(n) as nodes\nWITH apoc.coll.zip(nodes, range(0, size(nodes))) as pairs\nUNWIND pairs as pair \nRETURN pair[0].ADSA as ADSA, pair[1] as ID\n\n\n",
+          "width": 4,
+          "height": 2,
+          "x": 0,
+          "y": 5,
+          "type": "line",
+          "selection": {
+            "x": "ID",
+            "value": [
+              "ADSA"
+            ]
+          },
+          "settings": {
+            "colors": "nivo",
+            "marginLeft": 60,
+            "xTickValues": 5
+          }
+        },
+        {
+          "title": "Services Dependencies",
+          "query": "MATCH (n:Service)\nOPTIONAL MATCH (n)-[r]->(m)\nRETURN n,r,m",
+          "width": 8,
+          "height": 6,
+          "x": 4,
+          "y": 1,
+          "type": "chord",
+          "selection": {},
+          "settings": {}
+        },
+        {
+          "title": "System Coupling analysis",
+          "query": "MATCH (s:System)\nRETURN s\n\n\n",
+          "width": 12,
+          "height": 1,
+          "x": 0,
+          "y": 0,
+          "type": "coupling",
+          "selection": {},
+          "settings": {}
+        }
+      ]
+    },
+    {
+      "title": "Service level coupling",
+      "reports": [
+        {
+          "title": "Services' ADS",
+          "query": "MATCH (s:Service)\nWHERE s.isResource = false\nRETURN s.name AS Title, s.ADS AS ADS\nORDER BY s.ADS DESC",
+          "width": 4,
+          "height": 4,
+          "x": 0,
+          "y": 1,
+          "type": "bar",
+          "selection": {
+            "index": "Title",
+            "value": "ADS",
+            "key": "(none)"
+          },
+          "settings": {
+            "marginBottom": 120,
+            "marginRight": 50,
+            "layout": "vertical",
+            "barValues": false,
+            "refreshButtonEnabled": true
+          }
+        },
+        {
+          "title": "Services' Dependencies (outgoing)",
+          "query": "MATCH (n:Service)-[r]->(m:Service)\nRETURN n,r,m\nORDER BY n.ADS DESC\n",
+          "width": 7,
+          "height": 4,
+          "x": 4,
+          "y": 1,
+          "type": "chordSingleService",
+          "selection": {},
+          "settings": {}
+        },
+        {
+          "title": "Dependencies with resources",
+          "query": "MATCH (n:Service)-[r]->(m:Service)\nWHERE m.isResource = true\nWITH m, COLLECT(r) AS relationships, n, r\nRETURN m, r, n, size(relationships) as inDegree\nORDER BY inDegree DESC",
+          "width": 7,
+          "height": 4,
+          "x": 4,
+          "y": 10,
+          "type": "chordSingleService",
+          "selection": {},
+          "settings": {}
+        },
+        {
+          "title": "Resources in-degree",
+          "query": "MATCH (n:Service)-[r]->(m:Service)\nWHERE m.isResource = true\nWITH m, COLLECT(r) AS relationships\nRETURN m AS Database, size(relationships) AS inDegree\nORDER BY inDegree DESC\n\n\n",
+          "width": 4,
+          "height": 4,
+          "x": 0,
+          "y": 10,
+          "type": "bar",
+          "selection": {
+            "index": "Database",
+            "value": "inDegree",
+            "key": "(none)"
+          },
+          "settings": {
+            "marginRight": 50,
+            "marginBottom": 120,
+            "refreshButtonEnabled": true,
+            "hideSelections": false
+          }
+        },
+        {
+          "title": "  ",
+          "query": "# Dependencies between services\n\n\n",
+          "width": 11,
+          "height": 1,
+          "x": 0,
+          "y": 0,
+          "type": "text",
+          "selection": {},
+          "settings": {
+            "fullscreenEnabled": false
+          }
+        },
+        {
+          "title": "  ",
+          "query": "# Shared resources\n",
+          "width": 11,
+          "height": 1,
+          "x": 0,
+          "y": 9,
+          "type": "text",
+          "selection": {},
+          "settings": {}
+        },
+        {
+          "title": "Services' AIS",
+          "query": "MATCH (s:Service)\nWHERE s.isResource = false\nRETURN s.name AS Title, s.AIS AS AIS\nORDER BY s.AIS DESC",
+          "width": 4,
+          "height": 4,
+          "x": 0,
+          "y": 5,
+          "type": "bar",
+          "selection": {
+            "index": "Title",
+            "value": "AIS",
+            "key": "(none)"
+          },
+          "settings": {
+            "marginRight": 50,
+            "marginBottom": 120
+          }
+        },
+        {
+          "title": "Services' Dependencies (ingoing)",
+          "query": "MATCH (n:Service)<-[r]-(m:Service)\nWHERE n.isResource = false\nRETURN n, r, m\nORDER BY n.AIS DESC",
+          "width": 7,
+          "height": 4,
+          "x": 4,
+          "y": 5,
+          "type": "chordSingleService",
+          "selection": {},
+          "settings": {}
+        }
+      ]
+    },
+    {
+      "title": "Architectural smells",
+      "reports": [
+        {
+          "title": "Cyclic Dependencies Graphs",
+          "query": "MATCH p=(n)-[r:DEPENDS_ON*]->(n)\nWITH n, nodes(p) AS deps, r, length(p) AS size\nORDER BY size DESC\nRETURN n, deps, r, size",
+          "width": 6,
+          "height": 3,
+          "x": 6,
+          "y": 2,
+          "type": "graph",
+          "selection": {
+            "Service": "name"
+          },
+          "settings": {
+            "architecturalSmell": "Cyclic Dependency"
+          }
+        },
+        {
+          "title": "Hub-Like Dependencies Graphs",
+          "query": "MATCH (n:Service)-[r]-(m:Service), (S:System)\nWHERE n.ADS > S.adsMedian AND n.AIS > S.aisMedian AND abs(n.ADS - n.AIS) < (n.degree / 4)\nWITH n, collect(r) AS rels, collect(m) AS deps, count(distinct n) + count(distinct m) AS size\nRETURN n, rels, deps, size \nORDER BY size DESC",
+          "width": 6,
+          "height": 3,
+          "x": 0,
+          "y": 2,
+          "type": "graph",
+          "selection": {
+            "Service": "name"
+          },
+          "settings": {
+            "architecturalSmell": "Hub-Like",
+            "frozen": false,
+            "nodePositions": {}
+          }
+        },
+        {
+          "title": "  ",
+          "query": "# Hub-Like Dependencies",
+          "width": 6,
+          "height": 1,
+          "x": 0,
+          "y": 0,
+          "type": "text",
+          "selection": {},
+          "settings": {}
+        },
+        {
+          "title": "  ",
+          "query": "# Cyclic Dependencies\n\n\n",
+          "width": 6,
+          "height": 1,
+          "x": 6,
+          "y": 0,
+          "type": "text",
+          "selection": {},
+          "settings": {}
+        }
+      ]
+    }
+  ],
+  "parameters": {},
+  "extensions": {
+    "advanced-charts": true
+  }
+}
