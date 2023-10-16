@@ -123,7 +123,7 @@ export const REPORT_TYPES = {
         label: 'Architectural Smell',
         type: SELECTION_TYPES.LIST,
         default: false,
-        values: [true, false],
+        values: [false, 'Hub-Like Dependency', 'Cyclic Dependency'],
       },
       backgroundColor: {
         label: 'Background Color',

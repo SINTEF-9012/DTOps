@@ -32,6 +32,7 @@ interface ArchitecturalSmell {
   name: string;
   size: number;
   priority: Priority;
+  record;
 }
 
 /**
@@ -104,6 +105,20 @@ const NeoGraphChart = (props: ChartProps) => {
 
   let icons = parseNodeIconConfig(settings.iconStyle);
   const colorScheme = categoricalColorSchemes[settings.nodeColorScheme];
+
+  const dependencyCycleAlreadyExists = (cyclesList: number[][], newCycle: number[]) => {
+    for (const oldCycle of cyclesList) {
+      if (oldCycle == newCycle) {
+        return true;
+      }
+      if (oldCycle == null || newCycle == null) continue;
+      if (oldCycle.length !== newCycle.length) continue;
+      if (oldCycle.every((val, idx) => val == newCycle[idx])) {
+        return true;
+      }
+    }
+    return false;
+  };
 
   const generateVisualizationDataGraph = (records, _) => {
     let nodes: Record<string, any>[] = [];
@@ -226,52 +241,62 @@ const NeoGraphChart = (props: ChartProps) => {
   let architecturalSmells: ArchitecturalSmell[] = [];
   let architecturalSmellsSizes: number[] = [];
   let architecturalSmellsNumber;
+  let cyclicDependencyRelIds: number[][] = [];
   if (architecturalSmellProp) {
     props.records.map((record, rownumber) => {
       const smellSize: number = parseInt(record?._fields[3]);
-      console.log('type of smellsize: ' + typeof smellSize);
-      console.log(
-        'type of architecturalSmellsSizes: ' + typeof architecturalSmellsSizes[architecturalSmellsSizes.length - 1]
-      );
 
       // Insert only unique values
       if (!architecturalSmellsSizes.includes(smellSize)) {
-        console.log('Inserting');
         architecturalSmellsSizes.push(smellSize);
       }
-      const smell: ArchitecturalSmell = {
-        name: record?._fields[0]?.properties?.name,
-        size: smellSize,
-        priority: Priority.low,
-      };
-      architecturalSmells.push(smell);
-    });
-    // Prioritize smells
-    architecturalSmellsNumber = architecturalSmells.length;
-    const prioritiesNumber = architecturalSmellsSizes.length;
-    const highPriorityIndex = Math.floor(prioritiesNumber / 3);
-    const mediumPriorityIndex = Math.floor(prioritiesNumber / 3) * 2;
-    console.log('architectural smells: ' + architecturalSmellsSizes);
-    architecturalSmells.map((smell) => {
-      console.log('architecturalSmellsNumber: ' + architecturalSmellsNumber);
-      console.log('Size: ' + smell.size);
-      console.log('high priority size: ' + architecturalSmellsSizes[highPriorityIndex]);
-      console.log('medium priority size: ' + architecturalSmellsSizes[mediumPriorityIndex]);
-      if (smell.size >= architecturalSmellsSizes[highPriorityIndex]) {
-        console.log('High');
-        smell.priority = Priority.high;
-      } else if (smell.size >= architecturalSmellsSizes[mediumPriorityIndex]) {
-        console.log('Medium');
-        smell.priority = Priority.medium;
+
+      if (architecturalSmellProp === 'Cyclic Dependency') {
+        let relIds: number[] = [];
+        record._fields[2].map((relationship) => {
+          relIds.push(parseInt(relationship.identity));
+        });
+        relIds = relIds.sort();
+
+        // Check if cycle is repeated before adding it to the smells list
+        if (!dependencyCycleAlreadyExists(cyclicDependencyRelIds, relIds)) {
+          cyclicDependencyRelIds.push(relIds);
+          const smell: ArchitecturalSmell = {
+            name: record?._fields[0]?.properties?.name,
+            size: smellSize,
+            priority: Priority.low,
+            record: record,
+          };
+          architecturalSmells.push(smell);
+        }
       } else {
-        smell.priority = Priority.low;
-        console.log('Low');
+        const smell: ArchitecturalSmell = {
+          name: record?._fields[0]?.properties?.name,
+          size: smellSize,
+          priority: Priority.low,
+          record: record,
+        };
+        architecturalSmells.push(smell);
       }
+      // Prioritize smells
+      architecturalSmellsNumber = architecturalSmells.length;
+      const prioritiesNumber = architecturalSmellsSizes.length;
+      const highPriorityIndex = Math.floor(prioritiesNumber / 3);
+      const mediumPriorityIndex = Math.floor(prioritiesNumber / 3) * 2;
+      architecturalSmells.map((smell) => {
+        if (smell.size >= architecturalSmellsSizes[highPriorityIndex]) {
+          smell.priority = Priority.high;
+        } else if (smell.size >= architecturalSmellsSizes[mediumPriorityIndex]) {
+          smell.priority = Priority.medium;
+        } else {
+          smell.priority = Priority.low;
+        }
+      });
     });
   }
 
   // Handle selection of the smell from the dropdown menu
-  const [choosenArchitecturalSmellName, setService] = React.useState(architecturalSmells[0]?.name); // The first one will be the one with the highest ADS, if the query orders by ADS.
+  const [choosenArchitecturalSmellId, setService] = React.useState(0); // The first one will be the one with the highest ADS, if the query orders by ADS.
   const handleChange = (event) => {
     setService(event.target.value);
   };
@@ -279,12 +304,10 @@ const NeoGraphChart = (props: ChartProps) => {
   // Select record corresponding to the node with the smell
   let choosenArchitecturalSmell;
   if (architecturalSmellProp) {
-    choosenArchitecturalSmell = props.records.find(
-      (element) => element._fields[0]?.properties.name === choosenArchitecturalSmellName
-    );
+    choosenArchitecturalSmell = architecturalSmells[choosenArchitecturalSmellId].record;
   }
 
-  // When data is refreshed, rebuild the visualization data.
+  // When data is refreshed, rebuild the view.
   useEffect(() => {
     if (architecturalSmellProp) {
       generateVisualizationDataGraph([choosenArchitecturalSmell], Object.getOwnPropertyNames(chartProps));
@@ -296,6 +319,27 @@ const NeoGraphChart = (props: ChartProps) => {
   const createDisplayValue = (value) => {
     return renderValueByType(value);
   };
+
+  // Dropdown menu for choosing the Architectural Smell
+  // Shows a numeric ID for the Cyclic Dependencies and the center of the hub for Hub-Like Dependencies
+  let selectArchitecturalSmell;
+  if (architecturalSmellProp == 'Cyclic Dependency') {
+    selectArchitecturalSmell = (
+      <select value={choosenArchitecturalSmellId} onChange={handleChange} style={{ verticalAlign: 'center' }}>
+        {architecturalSmells.map((option, idx) => (
+          <option value={idx}>{idx + 1}</option>
+        ))}
+      </select>
+    );
+  } else if (architecturalSmellProp) {
+    selectArchitecturalSmell = (
+      <select value={choosenArchitecturalSmellId} onChange={handleChange} style={{ verticalAlign: 'center' }}>
+        {architecturalSmells.map((option, idx) => (
+          <option value={idx}>{option.name}</option>
+        ))}
+      </select>
+    );
+  }
 
   return (
     <div ref={observe} style={{ width: '100%', height: '100%' }}>
@@ -337,13 +381,7 @@ const NeoGraphChart = (props: ChartProps) => {
             }}
           >
             {/* <div> */}
-            {architecturalSmellsNumber > 1 && (
-              <select value={choosenArchitecturalSmellName} onChange={handleChange} style={{ verticalAlign: 'center' }}>
-                {architecturalSmells.map((option) => (
-                  <option value={option.name}>{option.name}</option>
-                ))}
-              </select>
-            )}
+            {architecturalSmellsNumber > 1 && selectArchitecturalSmell}
             {/* </div> */}
             <div style={{ float: 'right' }}>
               <span
@@ -360,16 +398,15 @@ const NeoGraphChart = (props: ChartProps) => {
                   color: 'black',
                 }}
               >
-                {'Size ' + architecturalSmells.find((smell) => smell.name === choosenArchitecturalSmellName)?.size}
+                {'Size ' + architecturalSmells[choosenArchitecturalSmellId]?.size}
                 <br></br>
-                {'Priority ' +
-                  architecturalSmells.find((smell) => smell.name === choosenArchitecturalSmellName)?.priority}
+                {'Priority ' + architecturalSmells[choosenArchitecturalSmellId]?.priority}
               </span>
             </div>
           </div>
         </>
       )}
-      <NeoGraphChartCanvas key={choosenArchitecturalSmellName}>
+      <NeoGraphChartCanvas key={choosenArchitecturalSmellId}>
         <GraphChartContextMenu {...chartProps} />
         <NeoGraphChartFitViewButton {...chartProps} />
         {settings.lockable ? <NeoGraphChartLockButton {...chartProps} /> : <></>}
