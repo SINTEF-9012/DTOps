@@ -10,9 +10,11 @@ const dependencyGraph = jsonGraph;
 const depFromDocker = true;
 
 const dockerCompFileUrl =
+  // 'https://raw.githubusercontent.com/microservices-patterns/ftgo-application/558dfc53b11d30a5f1d995c0c6d58d5106c28189/docker-compose.yml';
+  // 'https://raw.githubusercontent.com/ewolff/microservice-consul/master/docker/docker-compose.yml';
   // 'https://raw.githubusercontent.com/dotnet-architecture/eShopOnContainers/dev/src/docker-compose.yml';
   'https://raw.githubusercontent.com/lelylan/lelylan/master/docker-compose.yml';
-// 'https://raw.githubusercontent.com/microservices-patterns/ftgo-application/558dfc53b11d30a5f1d995c0c6d58d5106c28189/docker-compose.yml';
+
 const uri = 'bolt://localhost:7687';
 const user = 'neo4j';
 const pw = 'sindit-neo4j';
@@ -146,7 +148,10 @@ async function GenerateDepGraphFromDockerCompose() {
         // Check if the service is a resource
         let isResource = false;
         resourcesKeywords.map((dbKey) => {
-          if (parsedDockerCompose && parsedDockerCompose.services[serviceName].image.includes(dbKey)) {
+          if (
+            parsedDockerCompose &&
+            (parsedDockerCompose.services[serviceName]?.image?.includes(dbKey) || serviceName.includes(dbKey))
+          ) {
             isResource = true;
           }
         });
@@ -171,8 +176,9 @@ async function GenerateDepGraphFromDockerCompose() {
         const service = parsedDockerCompose.services[serviceName];
 
         // Create relationships for dependencies
-        if (service.depends_on) {
-          for (const dependency of service.depends_on) {
+        if (service.depends_on || service?.links) {
+          const deps = service.depends_on ? service.depends_on : service.links;
+          for (const dependency of deps) {
             const createDependencyRelationshipQuery = `
             MATCH (s1:Service {name: $name1})
             MATCH (s2:Service {name: $name2})
