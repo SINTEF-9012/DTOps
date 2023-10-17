@@ -36,7 +36,7 @@ Open the dashboard in browser: http://localhost:3000, choose "Existing Dashboard
 
 The configuration instructions can be found in the file "DTOps_tool_configuration.pdf" in the "docs" folder.
 
-# DTOps pending features
+# DTOps other features (to be integrated soon)
 
 1. Architecture Debt: Microservices (Temporal) Coupling Metrics and Visualization
 
@@ -50,11 +50,6 @@ The configuration instructions can be found in the file "DTOps_tool_configuratio
 
    2.2 DevOps process metrics
 
-Run MQTT-Kafka bridge:
-
-```
-yarn run mqtt-kafka-bridge
-```
 
 # Original README from NeoDash
 
