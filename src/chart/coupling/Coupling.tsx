@@ -43,7 +43,7 @@ function systemCriticalityEvaluation(
       : SCFCriticalityLabels.length - 1) +
     giniADSCriticalityLabels.length -
     1;
-  console.log('Maximum criticality: ' + maximumCriticality);
+
   if (systemIsLarge) {
     criticality += Math.floor((ADSACriticality + SCFCriticality) / 2);
   } else {
