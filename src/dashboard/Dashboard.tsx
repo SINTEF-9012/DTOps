@@ -17,7 +17,7 @@ import { createNotification } from '../application/ApplicationActions';
 import { createNotificationThunk } from '../page/PageThunks';
 import { downloadComponentAsImage } from '../chart/ChartUtils';
 import { GenerateDepGraph } from '../../server/coupling-metrics/DepGrapGenerator';
-import { GenerateMetrics, GenerateMetricsNoArgs } from '../../server/coupling-metrics/generateMetrics';
+import { parseMiSARFile } from '../../server/coupling-metrics/XMLParser';
 
 const Dashboard = ({ pagenumber, connection, applicationSettings, onConnectionUpdate, onDownloadDashboardAsImage }) => {
   const [drawerOpen, setDrawerOpen] = React.useState(false);

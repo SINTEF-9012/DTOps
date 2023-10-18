@@ -1,58 +1,17 @@
 import fs from 'fs';
-import yaml from 'js-yaml';
 import neo4j, { Integer } from 'neo4j-driver';
 import { List } from 'reselect/es/types';
 import jsonGraph from '../dependency_graphs/1.7.8.json';
-import { parse } from 'url';
+import microCompanyAnalysisMisar from '../MiSAR_files/microCompanyMisarTranformation.json';
+import { Architecture } from './MicroservicesArchitecture';
+import { Microservice, ArchitectureSource } from './Common';
 import gini from 'gini';
 
 const dependencyGraph = jsonGraph;
-const depFromDocker = true;
-
-const dockerCompFileUrl =
-  // 'https://raw.githubusercontent.com/microservices-patterns/ftgo-application/558dfc53b11d30a5f1d995c0c6d58d5106c28189/docker-compose.yml';
-  // 'https://raw.githubusercontent.com/ewolff/microservice-consul/master/docker/docker-compose.yml';
-  // 'https://raw.githubusercontent.com/dotnet-architecture/eShopOnContainers/dev/src/docker-compose.yml';
-  'https://raw.githubusercontent.com/lelylan/lelylan/master/docker-compose.yml';
 
 const uri = 'bolt://localhost:7687';
 const user = 'neo4j';
 const pw = 'sindit-neo4j';
-
-const resourcesKeywords = ['mongo', 'sql', 'mysql', 'postgres', 'neo4j', 'redis', 'memcached'];
-
-async function loadDockerComposeData() {
-  try {
-    const response = await fetch(dockerCompFileUrl);
-    if (!response.ok) {
-      throw new Error('Failed to fetch Docker Compose data');
-    }
-    const composeData = await response.text();
-    return composeData;
-  } catch (error) {
-    console.error('Error loading Docker Compose data:', error);
-    return null;
-  }
-}
-
-interface DockerComposeConfig {
-  version: string;
-  services: Record<string, any>; // Define a generic Record type for services
-  // Add other properties as needed
-}
-
-// Parse the Docker compose file to extract the services' dependencies
-async function parseDockerComposeFile(): Promise<DockerComposeConfig | null> {
-  const composeData = await loadDockerComposeData();
-  let composeConfig: DockerComposeConfig | null = null;
-  try {
-    composeConfig = await yaml.load(composeData);
-  } catch (error) {
-    console.error('Error parsing Docker Compose data:', error);
-    return null;
-  }
-  return composeConfig;
-}
 
 function median(values: number[]): number {
   if (values.length === 0) {
@@ -117,159 +76,57 @@ async function deletePreviousDatabase(session) {
 }
 
 export async function GenerateDepGraph() {
-  if (depFromDocker) {
-    GenerateDepGraphFromDockerCompose();
-  } else {
-    GenerateDepGraphFromSpinnakerJson();
-  }
-}
-
-async function GenerateDepGraphFromDockerCompose() {
   // Neo4j config
   const driver = neo4j.driver(uri, neo4j.auth.basic(user, pw));
   const session = driver.session();
 
   await deletePreviousDatabase(session);
 
-  let parsedDockerCompose: DockerComposeConfig | null = await parseDockerComposeFile();
+  const architecture = new Architecture(ArchitectureSource.DockerCompose);
+  const microservices = await architecture.getMicroservices();
 
   // Create dependency graph
-  if (parsedDockerCompose) {
-    try {
-      // Create a System node to maitain all the system level metrics
-      const createSystemNodeQuery = `
+  try {
+    // Create a System node to maitain all the system level metrics
+    const createSystemNodeQuery = `
       CREATE (S:System {N: TOINTEGER($n), SC: TOINTEGER($sc), SCF: $scf, ADSA: $adsa, adsMedian: TOINTEGER($adsMedian), aisMedian: TOINTEGER($aisMedian)})
     `;
-      await session.run(createSystemNodeQuery, { n: 0, sc: 0, scf: 0, adsa: 0, adsMedian: 0, aisMedian: 0 });
+    await session.run(createSystemNodeQuery, { n: 0, sc: 0, scf: 0, adsa: 0, adsMedian: 0, aisMedian: 0 });
 
-      for (const serviceName in parsedDockerCompose.services) {
-        const service = parsedDockerCompose.services[serviceName];
-
-        // Check if the service is a resource
-        let isResource = false;
-        resourcesKeywords.map((dbKey) => {
-          if (
-            parsedDockerCompose &&
-            (parsedDockerCompose.services[serviceName]?.image?.includes(dbKey) || serviceName.includes(dbKey))
-          ) {
-            isResource = true;
-          }
-        });
-
-        // Create nodes for services
-        const createServiceNodeQuery = `
+    for (const service of microservices) {
+      // Create nodes for services
+      const createServiceNodeQuery = `
         MATCH (S:System)
         CREATE (service:Service {name: $name, ADS: TOINTEGER($ads), AIS: TOINTEGER($ais), degree: TOINTEGER($degree), nodeSize: TOINTEGER($nodeSize), isResource: $isResource})
         SET S.N = S.N+1
       `;
-        await session.run(createServiceNodeQuery, {
-          name: serviceName,
-          ads: 0,
-          ais: 0,
-          degree: 0,
-          nodeSize: 1,
-          isResource: isResource,
-        });
-      }
+      await session.run(createServiceNodeQuery, {
+        name: service.name,
+        ads: 0,
+        ais: 0,
+        degree: 0,
+        nodeSize: 1,
+        isResource: service.isResource,
+      });
+    }
 
-      for (const serviceName in parsedDockerCompose.services) {
-        const service = parsedDockerCompose.services[serviceName];
-
-        // Create relationships for dependencies
-        if (service.depends_on || service?.links) {
-          const deps = service.depends_on ? service.depends_on : service.links;
-          for (const dependency of deps) {
-            const createDependencyRelationshipQuery = `
-            MATCH (s1:Service {name: $name1})
-            MATCH (s2:Service {name: $name2})
-            MATCH (S:System)
-            SET s1.ADS = s1.ADS+1, s1.degree = s1.degree+1, s2.degree = s2.degree+1, s1.nodeSize=s1.nodeSize+1, s2.AIS = s2.AIS+1, S.SC = S.SC+1
-            CREATE (s1)-[:DEPENDS_ON {value: 1}]->(s2) 
-          `;
-            await session.run(createDependencyRelationshipQuery, {
-              name1: serviceName,
-              name2: dependency,
-            });
-          }
+    for (const service of microservices) {
+      // Create relationships for dependencies
+      if (service.dependencies.length != 0) {
+        for (const dependency of service.dependencies) {
+          console.log('DEPENDENCY. Service1: ' + service.name + ', Service2: ' + dependency);
+          const createDependencyRelationshipQuery = `
+                        MATCH (s1:Service {name: $name1})
+                        MATCH (s2:Service {name: $name2})
+                        MATCH (S:System)
+                        SET s1.ADS = s1.ADS+1, s1.degree = s1.degree+1, s2.degree = s2.degree+1, s1.nodeSize=s1.nodeSize+1, s2.AIS = s2.AIS+1, S.SC = S.SC+1
+                        CREATE (s1)-[:DEPENDS_ON {value: 1}]->(s2) 
+                      `;
+          await session.run(createDependencyRelationshipQuery, {
+            name1: service.name,
+            name2: dependency,
+          });
         }
-      }
-    } catch (error) {
-      console.error('Error generating dependency graph: ' + error);
-      return null;
-    }
-
-    await generateSystemLevelMetrics(session);
-
-    // Close Neo4j session
-    session.close();
-    driver.close();
-
-    console.log('Dependency graph generated');
-  } else {
-    console.error('Error: failed to retrieve services from docker compose file');
-  }
-}
-
-export async function GenerateDepGraphFromSpinnakerJson() {
-  // Neo4j config
-  const driver = neo4j.driver(uri, neo4j.auth.basic(user, pw));
-  const session = driver.session();
-
-  await deletePreviousDatabase(session);
-
-  try {
-    // Create a System node to maitain all the system level metrics
-    const createSystemNodeQuery = `
-      CREATE (S:System {N: TOINTEGER($n), SC: TOINTEGER($sc), SCF: $scf, ADSA: $adsa})
-    `;
-    await session.run(createSystemNodeQuery, { n: 0, sc: 0, scf: 0, adsa: 0 });
-
-    // Create nodes for services
-    for (const node of dependencyGraph.elements.nodes) {
-      let name;
-      if (node.data.service) name = node.data.service;
-      else name = 'Root';
-
-      //checking shared resource factor
-      let srf;
-      if ((node as { srf?: boolean })?.srf === true) {
-        srf = true;
-      } else {
-        srf = false;
-      }
-
-      const createServiceNodeQuery = `
-        MATCH (S:System)
-        CREATE (service:Service {id: $id, name: $name, ADS: TOINTEGER($ads), nodeSize: TOINTEGER($nodeSize), SRF: $srf})
-        SET S.N = S.N+1
-      `;
-      await session.run(createServiceNodeQuery, { name: name, ads: 0, nodeSize: 1, id: node.data.id, srf: srf });
-    }
-
-    // Create edges for dependencies
-    for (const edge of dependencyGraph.elements.edges) {
-      if (edge['data']['source'] !== undefined) {
-        const source: string = edge.data.source;
-        const target: string = edge.data.target;
-
-        // Assuming if its http then the communication is sync, otherwise async
-        let communication;
-        if (edge.data.traffic.protocol === 'http') communication = 'sync';
-        else communication = 'async';
-
-        const createDependencyRelationshipQuery = `
-        MATCH (s1:Service {id: $idSource})
-        MATCH (s2:Service {id: $idTarget})
-        MATCH (S:System)
-        SET s1.ADS = s1.ADS+1, s1.nodeSize=s1.nodeSize+1
-        SET S.SC = S.SC+1
-        MERGE (s1)-[:DEPENDS_ON {value: 1, communication: $communication}]->(s2) 
-      `;
-        await session.run(createDependencyRelationshipQuery, {
-          idSource: source,
-          idTarget: target,
-          communication: communication,
-        });
       }
     }
   } catch (error) {
@@ -285,3 +142,79 @@ export async function GenerateDepGraphFromSpinnakerJson() {
 
   console.log('Dependency graph generated');
 }
+
+// export async function GenerateDepGraphFromSpinnakerJson() {
+//   // Neo4j config
+//   const driver = neo4j.driver(uri, neo4j.auth.basic(user, pw));
+//   const session = driver.session();
+
+//   await deletePreviousDatabase(session);
+
+//   try {
+//     // Create a System node to maitain all the system level metrics
+//     const createSystemNodeQuery = `
+//       CREATE (S:System {N: TOINTEGER($n), SC: TOINTEGER($sc), SCF: $scf, ADSA: $adsa})
+//     `;
+//     await session.run(createSystemNodeQuery, { n: 0, sc: 0, scf: 0, adsa: 0 });
+
+//     // Create nodes for services
+//     for (const node of dependencyGraph.elements.nodes) {
+//       let name;
+//       if (node.data.service) name = node.data.service;
+//       else name = 'Root';
+
+//       //checking shared resource factor
+//       let srf;
+//       if ((node as { srf?: boolean })?.srf === true) {
+//         srf = true;
+//       } else {
+//         srf = false;
+//       }
+
+//       const createServiceNodeQuery = `
+//         MATCH (S:System)
+//         CREATE (service:Service {id: $id, name: $name, ADS: TOINTEGER($ads), nodeSize: TOINTEGER($nodeSize), SRF: $srf})
+//         SET S.N = S.N+1
+//       `;
+//       await session.run(createServiceNodeQuery, { name: name, ads: 0, nodeSize: 1, id: node.data.id, srf: srf });
+//     }
+
+//     // Create edges for dependencies
+//     for (const edge of dependencyGraph.elements.edges) {
+//       if (edge['data']['source'] !== undefined) {
+//         const source: string = edge.data.source;
+//         const target: string = edge.data.target;
+
+//         // Assuming if its http then the communication is sync, otherwise async
+//         let communication;
+//         if (edge.data.traffic.protocol === 'http') communication = 'sync';
+//         else communication = 'async';
+
+//         const createDependencyRelationshipQuery = `
+//         MATCH (s1:Service {id: $idSource})
+//         MATCH (s2:Service {id: $idTarget})
+//         MATCH (S:System)
+//         SET s1.ADS = s1.ADS+1, s1.nodeSize=s1.nodeSize+1
+//         SET S.SC = S.SC+1
+//         MERGE (s1)-[:DEPENDS_ON {value: 1, communication: $communication}]->(s2)
+//       `;
+//         await session.run(createDependencyRelationshipQuery, {
+//           idSource: source,
+//           idTarget: target,
+//           communication: communication,
+//         });
+//       }
+//     }
+//   } catch (error) {
+//     console.error('Error generating dependency graph: ' + error);
+//     return null;
+//   }
+
+//   await generateSystemLevelMetrics(session);
+
+//   // Close Neo4j session
+//   session.close();
+//   driver.close();
+
+//   console.log('Dependency graph generated');
+// }
