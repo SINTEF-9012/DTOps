@@ -76,6 +76,14 @@ async function deletePreviousDatabase(session) {
 }
 
 export async function GenerateDepGraph() {
+  if (typeof window !== 'undefined') {
+    // Code is running in a client-side browser environment
+    console.log('Code is executed in the client');
+  } else {
+    // Code is running in a server-side environment
+    console.log('Code is executed in the server');
+  }
+
   // Neo4j config
   const driver = neo4j.driver(uri, neo4j.auth.basic(user, pw));
   const session = driver.session();
@@ -97,7 +105,7 @@ export async function GenerateDepGraph() {
       // Create nodes for services
       const createServiceNodeQuery = `
         MATCH (S:System)
-        CREATE (service:Service {name: $name, ADS: TOINTEGER($ads), AIS: TOINTEGER($ais), degree: TOINTEGER($degree), nodeSize: TOINTEGER($nodeSize), isResource: $isResource})
+        CREATE (service:Service {name: $name, ADS: TOINTEGER($ads), AIS: TOINTEGER($ais), degree: TOINTEGER($degree), isResource: $isResource})
         SET S.N = S.N+1
       `;
       await session.run(createServiceNodeQuery, {
@@ -105,7 +113,6 @@ export async function GenerateDepGraph() {
         ads: 0,
         ais: 0,
         degree: 0,
-        nodeSize: 1,
         isResource: service.isResource,
       });
     }
@@ -119,7 +126,7 @@ export async function GenerateDepGraph() {
                         MATCH (s1:Service {name: $name1})
                         MATCH (s2:Service {name: $name2})
                         MATCH (S:System)
-                        SET s1.ADS = s1.ADS+1, s1.degree = s1.degree+1, s2.degree = s2.degree+1, s1.nodeSize=s1.nodeSize+1, s2.AIS = s2.AIS+1, S.SC = S.SC+1
+                        SET s1.ADS = s1.ADS+1, s1.degree = s1.degree+1, s2.degree = s2.degree+1, s2.AIS = s2.AIS+1, S.SC = S.SC+1
                         CREATE (s1)-[:DEPENDS_ON {value: 1}]->(s2) 
                       `;
           await session.run(createDependencyRelationshipQuery, {
